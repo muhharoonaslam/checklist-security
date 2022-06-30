@@ -19,6 +19,7 @@ const { Title, Paragraph, Text, Link } = Typography;
 const { Header, Footer, Sider, Content } = Layout;
 
 const App = () => {
+  console.log("🚀 ~ file: App.js ~ line 23 ~ App ~ user", localStorage.getItem('user'))
   const imagePerRow = 4;
 
   const [next, setNext] = useState(imagePerRow);
@@ -33,7 +34,7 @@ const App = () => {
 
   const [form] = Form.useForm()
   const form_2 = useRef();
-
+  
   const layout = {
     labelCol: {
       span: 8,
@@ -63,9 +64,7 @@ const App = () => {
   };
   
   const handleChange = (tag, checked) => {
-    const nextSelectedTags = checked
-      ? [...filterCloud, tag]
-      : filterCloud.filter((t) => t !== tag);
+    const nextSelectedTags = checked  ? [...filterCloud, tag]  : filterCloud.filter((t) => t !== tag);
     console.log('You are interested in: ', nextSelectedTags);
     setFilterCloud(nextSelectedTags);
   };
@@ -95,6 +94,7 @@ const App = () => {
         }, (error) => {
             console.log(error.text);
         });
+        localStorage.setItem('user', values.user)
     })
     .catch(error => {
         console.log(error,values.user);
@@ -157,6 +157,9 @@ const App = () => {
           }).filter(function (x, i, a) { return a.indexOf(x) === i; })
           setClouds(cloudFilters)
           setServices(serviceFilters)
+          if(localStorage.getItem('user')){
+            setNext(JSON.stringify(snap.val().length))
+          }
         })
     },[])
 
@@ -216,12 +219,17 @@ const App = () => {
                       </Row>
                     </Card>
                    <Progress percent={Math.trunc(checklists.filter(function(item){ return item.active}).length/checklists.length * 100)} />
-                   {filterService}
+                   {/* {filterService} */}
                    {filterCloud}
                       {checklists.slice(0, next).filter(function(item){ 
-                        return (
-                          filterCloud.length != 0 || filterService.length != 0 ? filterCloud?.includes(item.cloud) || filterService?.includes(item.category) : item
-                        ) })
+                        if (filterCloud.length || filterService.length) {
+                          let abc= filterCloud.includes(item.cloud)
+                          let abc2= filterService.includes(item.category)
+                          return  abc || abc2 
+                        } else {
+                          return item
+                        }
+                       })
                         .map((item,index) => {
                           return (
                           <Row  align="middle" key={index}>

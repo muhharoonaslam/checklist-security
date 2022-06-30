@@ -31,7 +31,8 @@ const App = () => {
   const [Clouds, setClouds] = useState([]);
   const [Services, setServices] = useState([]);
 
-  const [form] = Form.useForm();
+  const [form] = Form.useForm()
+  const form_2 = useRef();
 
   const layout = {
     labelCol: {
@@ -77,6 +78,7 @@ const App = () => {
   };
 
   const onFinish = async (values) => {
+    console.log( form.getFieldValue(['user'])?.name )
     setLoading(true)
     console.log(values,form);
     const dbRef = collection(dbF, "users");
@@ -87,7 +89,7 @@ const App = () => {
         handleMoreImage()
         setLoading(false)
 
-        emailjs.sendForm('service_i532uq5', 'template_ge5gwrc', form.current, '6xIi52MU4Oubhkle7')
+        emailjs.sendForm('service_i532uq5', 'template_ge5gwrc', form_2.current, '6xIi52MU4Oubhkle7')
         .then((result) => {
             console.log('result.text',result.text);
         }, (error) => {
@@ -256,6 +258,13 @@ const App = () => {
                    </Col>
                  </Row>
                 <Modal title="Basic Modal" visible={visible} onOk={handleOk} onCancel={handleCancel}>
+                  <form ref={form_2}>
+                       <input name="name" value={Form.useWatch('user', form)?.name} hidden></input>
+                       <input name="email" value={Form.useWatch('user', form)?.email} hidden></input>
+                       <input name="phone" value={Form.useWatch('user', form)?.phone} hidden></input>
+                       <input name="organization" value={Form.useWatch('user', form)?.organiztion} hidden></input>
+                  </form>
+                  { form.getFieldValue('name')}
                 <Form {...layout}  form={form} name="nest-messages" onFinish={onFinish} validateMessages={validateMessages} >
                     <Form.Item
                       name={['user', 'name']}
@@ -274,15 +283,24 @@ const App = () => {
                       rules={[
                         {
                           type: 'email',
+                          required: true
                         },
                       ]}
                     >
                       <Input />
                     </Form.Item>
-                    <Form.Item name={['user', 'organiztion']} label="Organiztion">
+                    <Form.Item name={['user', 'organiztion']} label="Organiztion"  rules={[
+                        {
+                          required: true,
+                        },
+                      ]}>
                       <Input />
                     </Form.Item>
-                    <Form.Item name={['user', 'phone']} label="Phone Number">
+                    <Form.Item name={['user', 'phone']} label="Phone Number"  rules={[
+                        {
+                          required: true,
+                        },
+                      ]}>
                       <Input />
                     </Form.Item>
                     <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 8 }}>

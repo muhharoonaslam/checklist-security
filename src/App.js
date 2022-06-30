@@ -315,7 +315,7 @@ const App = () => {
                         </Col>
                     </Row>   
                   </Spin>
-                <Modal title="Basic Modal" visible={visible} onOk={handleOk} onCancel={handleCancel} footer={[]}>
+                <Modal title="Organization Signup" visible={visible} onOk={handleOk} onCancel={handleCancel} footer={[]}>
                   <form ref={form_2}>
                        <input name="name" value={Form.useWatch('user', form)?.name} hidden></input>
                        <input name="email" value={Form.useWatch('user', form)?.email} hidden></input>

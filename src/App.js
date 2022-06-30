@@ -1,25 +1,27 @@
 import { useState, useEffect, useRef } from "react"
 import emailjs from '@emailjs/browser';
 import { db,dbF } from "./config"
+import app from "./config"
 import { getDatabase, ref, child, get,set } from "firebase/database";
 import { addDoc, collection } from "firebase/firestore"; 
 
 // Add a new document in collection "cities"
 
 import { Col, Row,Tag } from 'antd';
-import { Divider, Button, Modal , Form, Input, Progress,Card  } from 'antd';
+import { Divider, Button, Modal , Form, Input, Progress,Collapse,Card,Spin} from 'antd';
+import { MoreOutlined } from '@ant-design/icons';
 
 import { Layout } from 'antd';
 
 import { Checkbox,Typography  } from 'antd';
 import { async } from "@firebase/util";
 
+const { Panel } = Collapse;
 const { CheckableTag } = Tag;
 const { Title, Paragraph, Text, Link } = Typography;
 const { Header, Footer, Sider, Content } = Layout;
 
 const App = () => {
-  console.log("🚀 ~ file: App.js ~ line 23 ~ App ~ user", localStorage.getItem('user'))
   const imagePerRow = 4;
 
   const [next, setNext] = useState(imagePerRow);
@@ -31,6 +33,7 @@ const App = () => {
   const [filterService, setFilterService] = useState([]);
   const [Clouds, setClouds] = useState([]);
   const [Services, setServices] = useState([]);
+  const [ItemIndex, setItemIndex] = useState();
 
   const [form] = Form.useForm()
   const form_2 = useRef();
@@ -58,6 +61,11 @@ const App = () => {
   const handleOk = () => {
     setVisible(false);
   };
+  const setIndex = (index) => {
+    console.log("🚀 ~ file: App.js ~ line 66 ~ setIndex ~ log", ItemIndex,index)
+    setItemIndex(index)
+    ItemIndex == index ? setItemIndex(null): setItemIndex(index) 
+  };
 
   const handleCancel = () => {
     setVisible(false);
@@ -65,21 +73,18 @@ const App = () => {
   
   const handleChange = (tag, checked) => {
     const nextSelectedTags = checked  ? [...filterCloud, tag]  : filterCloud.filter((t) => t !== tag);
-    console.log('You are interested in: ', nextSelectedTags);
     setFilterCloud(nextSelectedTags);
   };
   const handleChange2 = (tag, checked) => {
     const nextSelectedTags = checked
       ? [...filterService, tag]
       : filterService.filter((t) => t !== tag);
-    console.log('You are interested in: ', nextSelectedTags);
     setFilterService(nextSelectedTags);
   };
 
   const onFinish = async (values) => {
-    console.log( form.getFieldValue(['user'])?.name )
     setLoading(true)
-    console.log(values,form);
+    // console.log(values,form);
     const dbRef = collection(dbF, "users");
     const docRef = await addDoc(dbRef, values)
     .then(docRef => {
@@ -94,7 +99,7 @@ const App = () => {
         }, (error) => {
             console.log(error.text);
         });
-        localStorage.setItem('user', values.user)
+        localStorage.setItem('user', JSON.stringify(values.user))
     })
     .catch(error => {
         console.log(error,values.user);
@@ -145,22 +150,29 @@ const App = () => {
         }
     }
     useEffect(() =>{
-        const dbRef = ref(getDatabase(), "checklist");
+        setLoading(true)
+        const dbRef = ref(getDatabase(app), "checklist");
         get(dbRef).then(async (snap) => {
+          
           await setChecklist(snap.val())
-          console.log(snap.val())
+          
           let cloudFilters = snap.val().map((item,index) => {
             return (item.cloud)
           }).filter(function (x, i, a) { return a.indexOf(x) === i; })
           let serviceFilters = snap.val().map((item,index) => {
             return (item.category)
           }).filter(function (x, i, a) { return a.indexOf(x) === i; })
+
           setClouds(cloudFilters)
           setServices(serviceFilters)
+
           if(localStorage.getItem('user')){
             setNext(JSON.stringify(snap.val().length))
           }
+          await setLoading(false)
         })
+
+        
     },[])
 
 
@@ -174,98 +186,136 @@ const App = () => {
                     margin: 0,
                   }}
                >
-                  <Row justify="center">
-                   <Col span={20}>
-                    <Card >
-                      <Title level={3}>Filters</Title>
+                  <Spin spinning={loading}>
+                    <Row justify="center">
+                        <Col span={20}>
+                          <Card >
+                            <Title level={3}>Filters</Title>
 
-                      <Row>
-                        <Col span={4}><Title level={5}>Cloud Provider</Title> </Col>
-                        <Col span={20}>
+                            <Row>
+                              <Col span={4}><Title level={5}>Cloud Provider</Title> </Col>
+                              <Col span={20}>
+                                {
+                                    Clouds.map((item,index) => {
+                                      return (
+                                        <CheckableTag
+                                        size={"large"}
+                                          key={item}
+                                          color="magenta"
+                                          checked={filterCloud.indexOf(item) > -1}
+                                          onChange={(checked) => handleChange(item, checked)}
+                                        >
+                                          {item}
+                                        </CheckableTag> 
+                                      )
+                                    }).filter(function (x, i, a) { return a.indexOf(x) === i; })
+                                  }
+                              </Col>
+                            </Row>
+                            <Row>
+                              <Col span={4}><Title level={5}>Services</Title></Col>
+                              <Col span={20}>
+                                  {
+                                    Services.map((item,index) => {
+                                      return (
+                                        <CheckableTag
+                                          size={"large"}
+                                          key={item}
+                                          color="magenta"
+                                          checked={filterService.indexOf(item) > -1}
+                                          onChange={(checked) => handleChange2(item, checked)}
+                                        >
+                                          {item}
+                                        </CheckableTag> 
+                                      )
+                                    }).filter(function (x, i, a) { return a.indexOf(x) === i; })
+                                  }
+                              </Col>
+                            </Row>
+                          </Card>
+                        <Divider />
+                          <Progress percent={Math.trunc(checklists.filter(function(item){ return item.active}).length/checklists.length * 100)} />
+                        <Divider />
+                        <Card >
+                            {checklists.slice(0, next).filter(function(item){ 
+                              if (filterCloud.length || filterService.length) {
+                                let abc= filterCloud.includes(item.cloud)
+                                let abc2= filterService.includes(item.category)
+                                return  abc || abc2 
+                              } else {
+                                return item
+                              }
+                            })
+                              .map((item,index) => {
+                                return (
+                                  <Row  align="middle" key={index}>
+                                    <Col span={1}>
+                                      {item.active}
+                                      <Checkbox checked={item.active} onChange={(event)=>onChange(event, checklists,index)}></Checkbox>
+                                    </Col>
+                                    <Col span={14}>
+                                      <Title level={4}>{item.group} | {item.name}</Title>
+                                      <Paragraph>
+                                        {item.description}
+                                      </Paragraph>
+                                    
+                                    </Col>
+                                    <Col span={3}>
+                                      {item.category}
+                                    </Col>
+                                    <Col span={2}>
+                                      {item.cloud}
+                                    </Col>
+                                    <Col span={3}>
+                                      <Tag color={returnPriority(item.risk)}>{item.risk.toUpperCase()}</Tag>
+                                    </Col>
+                                    <Col span={1}>
+                                      <Button type="primary" shape="circle" icon={<MoreOutlined />} onClick={()=>setIndex(index)}/>
+                                    </Col>
+                                    <Col span={1}></Col>
+                                    {ItemIndex == index ?
+                                    <Col span={23}>
+                                      {console.log(item)}
+                                      <Divider />
+                                      <Row gutter={12}>
+                                        <Col span={12}>
+                                          <Title level={5}>Details</Title>
+                                          <Paragraph>
+                                            {item.pageDetail}
+                                          </Paragraph>
+
+                                        </Col>
+                                        <Col span={12}>
+                                          <Title level={5}>Group</Title>
+                                          <Paragraph>
+                                            {item.group}
+                                          </Paragraph>
+                                          <Title level={5}>Service</Title>
+                                          <Paragraph>
+                                            {item.service}
+                                          </Paragraph>
+                                        </Col>
+                                      </Row>
+                                    </Col> : ""}
+                                    <Col span={24}>
+                                      <Divider />
+                                    </Col>
+                                  </Row>
+                                  
+                                );
+                            })}
+                        </Card>
+                          <Divider />
                           {
-                              Clouds.map((item,index) => {
-                                return (
-                                  <CheckableTag
-                                  size={"large"}
-                                    key={item}
-                                    checked={filterCloud.indexOf(item) > -1}
-                                    onChange={(checked) => handleChange(item, checked)}
-                                  >
-                                    {item}
-                                  </CheckableTag> 
-                                )
-                              }).filter(function (x, i, a) { return a.indexOf(x) === i; })
-                            }
+                              next == checklists.length ? ""  :<Button type="primary" block size="large" onClick={setVisible}>
+                              Load More
+                            </Button>
+                          }
+                              
                         </Col>
-                      </Row>
-                      <Row>
-                        <Col span={4}><Title level={5}>Services</Title></Col>
-                        <Col span={20}>
-                            {
-                              Services.map((item,index) => {
-                                return (
-                                  <CheckableTag
-                                  size={"large"}
-                                    key={item}
-                                    checked={filterService.indexOf(item) > -1}
-                                    onChange={(checked) => handleChange2(item, checked)}
-                                  >
-                                    {item}
-                                  </CheckableTag> 
-                                )
-                              }).filter(function (x, i, a) { return a.indexOf(x) === i; })
-                            }
-                        </Col>
-                      </Row>
-                    </Card>
-                   <Progress percent={Math.trunc(checklists.filter(function(item){ return item.active}).length/checklists.length * 100)} />
-                   {/* {filterService} */}
-                   {filterCloud}
-                      {checklists.slice(0, next).filter(function(item){ 
-                        if (filterCloud.length || filterService.length) {
-                          let abc= filterCloud.includes(item.cloud)
-                          let abc2= filterService.includes(item.category)
-                          return  abc || abc2 
-                        } else {
-                          return item
-                        }
-                       })
-                        .map((item,index) => {
-                          return (
-                          <Row  align="middle" key={index}>
-                            <Col span={1}>
-                              {item.active}
-                              <Checkbox checked={item.active} onChange={(event)=>onChange(event, checklists,index)}></Checkbox>
-                            </Col>
-                            <Col span={14}>
-                              <Title level={4}>{item.group}</Title>
-                              <Paragraph>
-                                {item.description}
-                              </Paragraph>
-                             
-                            </Col>
-                            <Col span={3}>
-                              {item.category}
-                            </Col>
-                            <Col span={2}>
-                              {item.cloud}
-                            </Col>
-                            <Col span={4}>
-                              <Tag color={returnPriority(item.risk)}>{item.risk.toUpperCase()}</Tag>
-                            </Col>
-                          </Row>
-                          );
-                      })}
-                       <Divider />
-                       {
-                          next !== checklists.length ? <Button type="primary" block size="large" onClick={setVisible}>
-                          Load More
-                        </Button>  :""
-                       }
-                        
-                   </Col>
-                 </Row>
-                <Modal title="Basic Modal" visible={visible} onOk={handleOk} onCancel={handleCancel}>
+                    </Row>   
+                  </Spin>
+                <Modal title="Basic Modal" visible={visible} onOk={handleOk} onCancel={handleCancel} footer={[]}>
                   <form ref={form_2}>
                        <input name="name" value={Form.useWatch('user', form)?.name} hidden></input>
                        <input name="email" value={Form.useWatch('user', form)?.email} hidden></input>

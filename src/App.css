@@ -1,2 +1,7 @@
-import 'antd/dist/antd.css';
-
+.ant-progress-bg, .ant-progress-inner{
+    height: 30px !important;
+    border-radius: 100px !important;
+}
+.ant-progress-inner{
+    background-color: #bfbfbf !important;
+}
